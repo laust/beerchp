@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <!-- Vue - development version, includes helpful console warnings -->
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <!-- Axios -->
+        <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+        <!-- Bulma -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.5/css/bulma.min.css">
+        <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+    </head>
+    <body>
+            <div id="beer_event_app">
+                <section class="section">
+                    <div class="container">
+                        <h1 class="title">Ølevents København</h1>
+                        <table class="table is-striped is-hoverable">
+                            <thead>
+                                <tr>
+                                    <th>Ølsted</th>
+                                    <th>Events</th>
+                                    <th>Posts</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="record in records" :key="record.id">
+                                    <td>{{ record.fields['Name'] }}</td>
+                                    <td v-if="record.fields['fb_events_url']">
+                                        <a :href="record.fields['fb_events_url']" target="_blank">events</a>
+                                    </td>
+                                    <td v-else>-</td>
+                                    <td v-if="record.fields['fb_posts_url']">
+                                        <a :href="record.fields['fb_posts_url']" target="_blank">posts</a>
+                                    </td>
+                                    <td v-else>-</td>
+                                </tr>
+                            </tbody> 
+                        </table> 
+                        <p>{{ prev_offset }} - {{ next_offset }}</p>
+                        <button v-on:click="get_page(prev_offset)" class="button">Forrige</button>
+                        <button v-on:click="open_events" class="button is-primary">Åben events</button>
+                        <button v-on:click="open_posts" class="button">Åben posts</button>
+                        <button v-on:click="open_all" class="button">Åben alle</button>
+                        <button v-on:click="get_page(next_offset)" class="button">Næste</button>
+                    </div>
+                </section>
+
+                <hr>
+                
+                {{ records }}
+                
+                <hr>
+
+                {{ offset }}
+            </div>
+            <script>
+                    // Get query string parameters
+                    const params = new URLSearchParams(window.location.search); 
+                    if (!params.get("key")) {
+                        alert('API key til Airtable skal angives som parameter!')
+                        } else {
+                            // Create Vue app
+                            var beer_event_app = new Vue({
+                                el: '#beer_event_app',
+                                data () {
+                                    return {
+                                        base_url: 'https://api.airtable.com/v0/app9gtVw9xaMza5Sr/Beer%20places',
+                                        pagesize: 10,
+                                        records: null,
+                                        next_offset: null,
+                                    }
+                                },
+                                mounted () {
+                                    this.prev_offset = this.next_offset
+                                    axios
+                                        .get(this.base_url, 
+                                            {
+                                                headers: {
+                                                    Authorization: 'Bearer ' + params.get("key")
+                                                },
+                                                params: {
+                                                    'pageSize': this.pagesize,
+                                                    'offset': this.next_offset,
+                                                    'sort[0][field]': 'Name',
+                                                }
+                                            })
+                                        .then(response => (
+                                            this.records = response.data.records,
+                                            this.next_offset = response.data.offset
+                                        ))
+                                },
+                                methods: {
+                                    get_page: function (offset) {
+                                        this.prev_offset = this.next_offset
+                                        axios
+                                            .get(this.base_url, 
+                                                {
+                                                    headers: {
+                                                        Authorization: 'Bearer ' + params.get("key")
+                                                    },
+                                                    params: {
+                                                        'pageSize': this.pagesize,
+                                                        'offset': offset,
+                                                        'sort[0][field]': 'Name',
+                                                    }
+                                                })
+                                            .then(response => (
+                                                this.records = response.data.records,
+                                                this.next_offset = response.data.offset
+                                            ))
+
+                                    },
+                                    open_events: function (event) {
+                                        for (let i = 0; i < this.records.length; i++)  {
+                                            let event_url = this.records[i]["fields"]["fb_events_url"]
+                                            if (event_url) {
+                                                window.open(event_url, '_blank')
+                                            }
+                                        }
+                                        console.log(this.$route.params.test)
+                                    },
+                                    open_posts: function (event) {
+                                        for (let i = 0; i < this.records.length; i++)  {
+                                            let post_url = this.records[i]["fields"]["fb_posts_url"]
+                                            if (post_url) {
+                                                window.open(post_url, '_blank')
+                                            }
+                                        }
+                                        
+                                    },
+                                    open_all: function (event) {
+                                        for (let i = 0; i < this.records.length; i++)  {
+                                            let event_url = this.records[i]["fields"]["fb_events_url"]
+                                            if (event_url) {
+                                                window.open(event_url, '_blank')
+                                            }
+                                            let post_url = this.records[i]["fields"]["fb_posts_url"]
+                                            if (post_url) {
+                                                window.open(post_url, '_blank')
+                                            }
+                                        }
+                                        
+                                    }                            
+                                }
+                            })
+                        }
+                </script>
+
+    </body>
+</html>
